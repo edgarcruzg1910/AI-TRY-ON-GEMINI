@@ -1,0 +1,230 @@
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Probador Virtual con IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8 bg-gray-100 min-h-screen flex items-center justify-center">
+
+<div class="bg-white p-6 sm:p-10 rounded-3xl shadow-2xl w-full max-w-4xl text-center flex flex-col items-center">
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-800 mb-2">Probador Virtual con IA</h1>
+    <p class="text-gray-500 mb-8 sm:mb-12">Sube una imagen de una persona y una prenda para ver el resultado.</p>
+
+    <div class="w-full flex flex-col sm:flex-row gap-6 mb-8 items-center justify-center">
+        <!-- Contenedor para la imagen de la persona -->
+        <div class="flex flex-col items-center gap-4 w-full sm:w-1/2">
+            <label for="person-image" class="block text-gray-700 font-semibold mb-2">Imagen de la Persona</label>
+            <input type="file" id="person-image" accept="image/*" class="w-full text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-indigo-50 file:text-indigo-700
+                hover:file:bg-indigo-100" />
+            <div id="person-preview-container" class="mt-4 w-full h-64 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden flex items-center justify-center">
+                <img id="person-preview" class="hidden w-full h-full object-contain" />
+                <span id="person-placeholder" class="text-gray-400 text-sm">Previsualización de la persona</span>
+            </div>
+        </div>
+
+        <!-- Contenedor para la imagen de la prenda -->
+        <div class="flex flex-col items-center gap-4 w-full sm:w-1/2">
+            <label for="clothing-image" class="block text-gray-700 font-semibold mb-2">Imagen de la Prenda</label>
+            <input type="file" id="clothing-image" accept="image/*" class="w-full text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-indigo-50 file:text-indigo-700
+                hover:file:bg-indigo-100" />
+            <div id="clothing-preview-container" class="mt-4 w-full h-64 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden flex items-center justify-center">
+                <img id="clothing-preview" class="hidden w-full h-full object-contain" />
+                <span id="clothing-placeholder" class="text-gray-400 text-sm">Previsualización de la prenda</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón de generar y área de resultado -->
+    <button id="generate-btn" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-indigo-700 transition duration-300 ease-in-out transform hover:scale-105 disabled:bg-indigo-400 disabled:cursor-not-allowed">
+        Generar Imagen
+    </button>
+
+    <div id="loading" class="mt-8 hidden flex flex-col items-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-500 mb-4"></div>
+        <p class="text-indigo-600 font-medium">Generando tu imagen... esto puede tardar unos segundos.</p>
+    </div>
+
+    <div id="result-container" class="mt-8 hidden w-full">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Resultado</h2>
+        <div class="w-full border-2 border-gray-300 rounded-xl overflow-hidden">
+            <img id="result-image" class="w-full h-auto object-contain" />
+        </div>
+        <a id="download-btn" download="virtual_tryon_result.png" class="mt-4 inline-block bg-green-500 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-green-600 transition duration-300 ease-in-out transform hover:scale-105">
+            Descargar Imagen
+        </a>
+    </div>
+</div>
+
+<script>
+    // Variables globales
+    const personImageInput = document.getElementById('person-image');
+    const clothingImageInput = document.getElementById('clothing-image');
+    const personPreview = document.getElementById('person-preview');
+    const clothingPreview = document.getElementById('clothing-preview');
+    const personPlaceholder = document.getElementById('person-placeholder');
+    const clothingPlaceholder = document.getElementById('clothing-placeholder');
+    const generateBtn = document.getElementById('generate-btn');
+    const loadingDiv = document.getElementById('loading');
+    const resultContainer = document.getElementById('result-container');
+    const resultImage = document.getElementById('result-image');
+    const downloadBtn = document.getElementById('download-btn');
+
+    const apiKey = ""; // La clave API es proporcionada automáticamente por el entorno de Google
+
+    // Función para previsualizar la imagen seleccionada
+    function previewImage(input, imgElement, placeholderElement) {
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imgElement.src = e.target.result;
+                imgElement.classList.remove('hidden');
+                placeholderElement.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            imgElement.classList.add('hidden');
+            placeholderElement.classList.remove('hidden');
+        }
+        checkInputs();
+    }
+
+    // Función para habilitar o deshabilitar el botón de generar
+    function checkInputs() {
+        if (personImageInput.files.length > 0 && clothingImageInput.files.length > 0) {
+            generateBtn.disabled = false;
+        } else {
+            generateBtn.disabled = true;
+        }
+    }
+
+    // Escuchadores de eventos para los inputs de archivos
+    personImageInput.addEventListener('change', () => previewImage(personImageInput, personPreview, personPlaceholder));
+    clothingImageInput.addEventListener('change', () => previewImage(clothingImageInput, clothingPreview, clothingPlaceholder));
+
+    // Deshabilita el botón al cargar la página inicialmente
+    generateBtn.disabled = true;
+
+    // Función principal para generar la imagen
+    generateBtn.addEventListener('click', async () => {
+        // Ocultar resultados anteriores y mostrar el indicador de carga
+        resultContainer.classList.add('hidden');
+        loadingDiv.classList.remove('hidden');
+        generateBtn.disabled = true;
+        downloadBtn.classList.add('hidden');
+
+        try {
+            // Obtener los archivos en formato Base64
+            const personBase64 = await toBase64(personImageInput.files[0]);
+            const clothingBase64 = await toBase64(clothingImageInput.files[0]);
+
+            // Crear el payload para la solicitud a la API
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: "put the clothing from the second image onto the person in the first image, making it look as realistic as possible, including folds and textures." },
+                        { inlineData: { mimeType: "image/jpeg", data: personBase64.split(',')[1] } },
+                        { inlineData: { mimeType: "image/jpeg", data: clothingBase64.split(',')[1] } }
+                    ]
+                }],
+                generationConfig: {
+                    responseModalities: ["TEXT", "IMAGE"]
+                },
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+
+            // Realizar la llamada a la API con reintentos
+            let attempts = 0;
+            const maxAttempts = 5;
+            let response;
+            while (attempts < maxAttempts) {
+                try {
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.status !== 429) {
+                        break; // Salir del bucle si no es un error de "demasiadas solicitudes"
+                    }
+                    console.warn(`Attempt ${attempts + 1} failed due to rate limiting. Retrying in ${Math.pow(2, attempts)} seconds.`);
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 1000));
+                    attempts++;
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    break;
+                }
+            }
+            if (!response || !response.ok) {
+                throw new Error(`API request failed with status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+            if (base64Data) {
+                const imageUrl = `data:image/png;base64,${base64Data}`;
+                resultImage.src = imageUrl;
+                downloadBtn.href = imageUrl;
+                resultContainer.classList.remove('hidden');
+                downloadBtn.classList.remove('hidden');
+            } else {
+                console.error('No se encontró imagen en la respuesta de la API.');
+                // Usar un modal en lugar de un alert
+                displayMessage("Error: No se pudo generar la imagen. Intenta con otras imágenes.", "error");
+            }
+
+        } catch (error) {
+            console.error('Error al generar la imagen:', error);
+            // Usar un modal en lugar de un alert
+            displayMessage("Ocurrió un error. Por favor, inténtalo de nuevo más tarde.", "error");
+        } finally {
+            loadingDiv.classList.add('hidden');
+            generateBtn.disabled = false;
+        }
+    });
+
+    // Función para convertir archivo a Base64
+    function toBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    // Función para mostrar mensajes como si fuera un modal (sustituye a alert)
+    function displayMessage(message, type) {
+        // Implementar un modal personalizado en lugar de alert
+        // Por ejemplo, añadiendo un div flotante al cuerpo del documento
+        console.log(`Mensaje (${type}): ${message}`);
+        const modal = document.createElement('div');
+        modal.className = "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg p-6 max-w-sm text-center z-50";
+        modal.innerHTML = `
+            <p class="text-gray-800 text-lg mb-4">${message}</p>
+            <button class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-full" onclick="this.parentElement.remove()">Cerrar</button>
+        `;
+        document.body.appendChild(modal);
+    }
+</script>
+
+</body>
+</html>
